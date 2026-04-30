@@ -22,7 +22,6 @@
 #define ESI_VALUES_H
 
 #include <cstdint>
-#include <format>
 #include <memory> // (may be removable later)
 #include <optional>
 #include <ostream>
