@@ -183,25 +183,11 @@ jobs:
       matrix:
         config:
           - os: macos-14
-            python-env: cp310-macosx_arm64
-          - os: macos-14
-            python-env: cp311-macosx_arm64
-          - os: macos-14
             python-env: cp312-macosx_arm64
           - os: macos-14
             python-env: cp313-macosx_arm64
           - os: macos-14
             python-env: cp314-macosx_arm64
-          - os: macos-13
-            python-env: cp310-macosx_x86_64
-          - os: macos-13
-            python-env: cp311-macosx_x86_64
-          - os: macos-13
-            python-env: cp312-macosx_x86_64
-          - os: macos-13
-            python-env: cp313-macosx_x86_64
-          - os: macos-13
-            python-env: cp314-macosx_x86_64
     runs-on: ${{ matrix.config.os }}
     steps:
       - name: Setup Python
