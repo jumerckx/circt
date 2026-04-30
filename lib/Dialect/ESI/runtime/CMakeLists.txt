@@ -355,6 +355,9 @@ if(ESI_COSIM)
     protobuf::libprotobuf
     gRPC::grpc++
   )
+  target_link_libraries(CosimRpc PRIVATE
+    fmt::fmt-header-only
+  )
   target_include_directories(CosimRpc PUBLIC "$<BUILD_INTERFACE:${PROTO_BINARY_DIR}>")
   protobuf_generate(
       TARGET CosimRpc
