@@ -28,6 +28,11 @@
 #include <dlfcn.h>
 #include <linux/limits.h>
 #include <unistd.h>
+#elif defined(__APPLE__)
+#include <dlfcn.h>
+#include <mach-o/dyld.h>
+#include <sys/syslimits.h>
+#include <unistd.h>
 #elif _WIN32
 #include <windows.h>
 #endif
@@ -111,6 +116,12 @@ static std::filesystem::path getExePath() {
   if (count == -1)
     throw std::runtime_error("Could not get executable path");
   return std::filesystem::path(std::string(result, count));
+#elif defined(__APPLE__)
+  char buffer[PATH_MAX];
+  uint32_t size = sizeof(buffer);
+  if (_NSGetExecutablePath(buffer, &size) != 0)
+    throw std::runtime_error("Could not get executable path");
+  return std::filesystem::path(std::string(buffer));
 #elif _WIN32
   char buffer[MAX_PATH];
   DWORD length = GetModuleFileNameA(NULL, buffer, MAX_PATH);
@@ -118,13 +129,13 @@ static std::filesystem::path getExePath() {
     throw std::runtime_error("Could not get executable path");
   return std::filesystem::path(std::string(buffer, length));
 #else
-#eror "Unsupported platform"
+#error "Unsupported platform"
 #endif
 }
 
 /// Get the path to the currently running shared library.
 static std::filesystem::path getLibPath() {
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
   Dl_info dl_info;
   dladdr((void *)getLibPath, &dl_info);
   return std::filesystem::path(std::string(dl_info.dli_fname));
@@ -144,7 +155,7 @@ static std::filesystem::path getLibPath() {
 
   return std::filesystem::path(std::string(buffer, length));
 #else
-#eror "Unsupported platform"
+#error "Unsupported platform"
 #endif
 }
 
@@ -193,6 +204,8 @@ static void loadBackend(Context &ctxt, std::string backend) {
   // Get the file name we are looking for.
 #ifdef __linux__
   std::string backendFileName = "lib" + backend + "Backend.so";
+#elif defined(__APPLE__)
+  std::string backendFileName = "lib" + backend + "Backend.dylib";
 #elif _WIN32
   // In MSVC debug builds, load the debug variant of the plugin DLL (e.g.
   // CosimBackend_d.dll) to ensure compatibility.
@@ -233,7 +246,7 @@ static void loadBackend(Context &ctxt, std::string backend) {
   }
 
   // Attempt to load it.
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
   void *handle = dlopen(backendPath.string().c_str(), RTLD_NOW | RTLD_GLOBAL);
   if (!handle) {
     std::string error(dlerror());
@@ -288,7 +301,7 @@ static void loadBackend(Context &ctxt, std::string backend) {
     throw std::runtime_error(fullError);
   }
 #else
-#eror "Unsupported platform"
+#error "Unsupported platform"
 #endif
   logger.info("CONNECT", "loaded backend plugin: " + backendPath.string());
 }
