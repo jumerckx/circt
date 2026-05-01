@@ -39,12 +39,6 @@ jobs:
             cibw_build: cp313-win_amd64
           - os: windows-2022
             cibw_build: cp314-win_amd64
-          - os: macos-14
-            cibw_build: cp312-macosx_arm64
-          - os: macos-14
-            cibw_build: cp313-macosx_arm64
-          - os: macos-14
-            cibw_build: cp314-macosx_arm64
 
     steps:
       - name: Get CIRCT
@@ -62,10 +56,6 @@ jobs:
         shell: pwsh
         if: runner.os == 'Windows'
         run: choco install ninja
-
-      - name: Install deps with brew (macOS)
-        if: runner.os == 'macOS'
-        run: brew install ninja grpc protobuf
 
       - name: Setup vcpkg binary caching (Windows)
         if: runner.os == 'Windows'
@@ -94,24 +84,12 @@ jobs:
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel==3.3.0
 
-      - name: Build wheels (Linux)
-        if: runner.os == 'Linux'
+      - name: Build wheels
+        if: runner.os != 'Windows'
         env:
           CIBW_BUILD: ${{ matrix.config.cibw_build }}
           SETUPTOOLS_SCM_DEBUG: True
         run: python -m cibuildwheel --output-dir wheelhouse ./lib/Dialect/ESI/runtime
-
-      - name: Build wheels (macOS)
-        if: runner.os == 'macOS'
-        env:
-          CIBW_BUILD: ${{ matrix.config.cibw_build }}
-          SETUPTOOLS_SCM_DEBUG: True
-        run: |
-          # Make brew-installed gRPC/protobuf discoverable by CMake. Brew lives
-          # under /opt/homebrew on Apple Silicon and /usr/local on Intel.
-          BREW_PREFIX="$(brew --prefix)"
-          export CIBW_ENVIRONMENT_MACOS="CMAKE_PREFIX_PATH=$BREW_PREFIX SETUPTOOLS_SCM_DEBUG=True"
-          python -m cibuildwheel --output-dir wheelhouse ./lib/Dialect/ESI/runtime
 
       - name: Build wheels (Windows)
         if: runner.os == 'Windows'
@@ -159,16 +137,6 @@ jobs:
       - name: List downloaded wheels
         run: ls -laR
         working-directory: ./wheelhouse/
-
-      - name: Remove macOS wheels before PyPI upload
-        # macOS wheels are still kept as GitHub artifacts (uploaded by the
-        # build job), but are intentionally not published to PyPI.
-        run: |
-          shopt -s nullglob
-          for f in wheelhouse/*macosx*.whl; do
-            echo "Skipping macOS wheel for PyPI: $f"
-            rm -f "$f"
-          done
 
       - name: Upload wheels to pypi
         uses: pypa/gh-action-pypi-publish@release/v1

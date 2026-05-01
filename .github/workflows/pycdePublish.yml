@@ -173,78 +173,7 @@ jobs:
           if-no-files-found: error
 
   # ---------------------------------------------------------------------------
-  #  Build and test macOS wheels.
-  # ---------------------------------------------------------------------------
-
-  build-macos:
-    name: Build
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-          - os: macos-14
-            python-env: cp312-macosx_arm64
-          - os: macos-14
-            python-env: cp313-macosx_arm64
-          - os: macos-14
-            python-env: cp314-macosx_arm64
-    runs-on: ${{ matrix.config.os }}
-    steps:
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Get CIRCT (no submodules)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-          submodules: false
-
-      - name: Get shallow LLVM submodule
-        run: |
-          git submodule update --init --recursive --recommend-shallow --depth 1
-
-      - name: Install dependencies
-        run: |
-          set -o errexit
-          brew install ninja
-          python3 -m pip install --upgrade pip
-          python3 -m pip install cibuildwheel twine
-
-      - name: Build wheel
-        env:
-          CIBW_BUILD: ${{ matrix.config.python-env }}
-          CMAKE_GENERATOR: Ninja
-          SETUPTOOLS_SCM_DEBUG: True
-          BUILD_TYPE: Release
-          # PyCDE integration tests are not yet enabled on macOS wheels.
-          RUN_TESTS: False
-        run: |
-          set -o errexit
-          export PATH=$PATH:$HOME/.local/bin
-
-          echo "Building wheel"
-          cibuildwheel --output-dir wheelhouse frontends/PyCDE
-
-      - name: Get wheel name
-        shell: bash
-        id: whl-name
-        run: |
-          cd wheelhouse
-          echo WHL=`ls *.whl` >> "$GITHUB_OUTPUT"
-
-      - name: Upload wheels as artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.whl-name.outputs.WHL }}
-          path: wheelhouse/${{ steps.whl-name.outputs.WHL }}
-          retention-days: 7
-          if-no-files-found: error
-
-  # ---------------------------------------------------------------------------
-  #  If the Linux, Windows, and macOS builds are successful, push the wheels to
+  #  If both the Linux and Windows builds are successful, push the wheels to
   #  pypi. Only do this on the main branch or a tag.
   # ---------------------------------------------------------------------------
 
@@ -255,7 +184,6 @@ jobs:
     needs:
       - build-linux
       - build-windows
-      - build-macos
     environment:
       name: pypi
       url: https://pypi.org/p/esiaccel
@@ -272,16 +200,6 @@ jobs:
       - name: List downloaded wheels
         run: ls -laR
         working-directory: ./wheelhouse/
-
-      - name: Remove macOS wheels before PyPI upload
-        # macOS wheels are still kept as GitHub artifacts (uploaded by the
-        # build-macos job), but are intentionally not published to PyPI.
-        run: |
-          shopt -s nullglob
-          for f in wheelhouse/*macosx*.whl; do
-            echo "Skipping macOS wheel for PyPI: $f"
-            rm -f "$f"
-          done
 
       - name: Upload wheels to pypi
         uses: pypa/gh-action-pypi-publish@release/v1
