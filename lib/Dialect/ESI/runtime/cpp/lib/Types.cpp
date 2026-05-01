@@ -16,7 +16,7 @@
 #include "esi/Values.h"
 #include <algorithm>
 #include <cstring>
-#include <format>
+#include <fmt/format.h>
 #include <span>
 #include <sstream>
 
@@ -70,7 +70,7 @@ static void dumpType(std::ostream &os, const esi::Type *type, int level = 0,
       else if (i > 0)
         os << " ";
       const auto &[name, direction, fieldType] = channels[i];
-      os << std::format(
+      os << fmt::format(
           "{} [{}]: ", direction == BundleType::To ? "to" : "from", name);
       dumpType(os, fieldType, level + 1, oneLine);
       if (i < channels.size() - 1)
@@ -129,7 +129,7 @@ BundleType::findChannel(std::string name) const {
     if (channelName == name)
       return std::make_pair(type, dir);
   throw std::runtime_error(
-      std::format("Channel '{}' not found in bundle", name));
+      fmt::format("Channel '{}' not found in bundle", name));
 }
 
 void ChannelType::ensureValid(const std::any &obj) const {
@@ -154,7 +154,7 @@ void VoidType::ensureValid(const std::any &obj) const {
     return;
   } catch (const std::bad_any_cast &) {
     throw std::runtime_error(
-        std::format("void type must be represented by empty std::any or "
+        fmt::format("void type must be represented by empty std::any or "
                     "nullptr, but got {}",
                     obj.type().name()));
   }
@@ -166,7 +166,7 @@ std::any VoidType::deserialize(BitVector &data) const {
   // Extract one byte and return the rest. Check that the byte is 0.
   BitVector value = data.lsb(8);
   if (std::ranges::any_of(value, [](auto b) { return b; }))
-    throw std::runtime_error(std::format("void type byte must be 0, got {:b}",
+    throw std::runtime_error(fmt::format("void type byte must be 0, got {:b}",
                                          value.getSpan().front()));
 
   data >>= 8;
@@ -202,7 +202,7 @@ void BitsType::ensureValid(const std::any &obj) const {
                                std::to_string(data.size()));
     }
   } catch (const std::bad_any_cast &) {
-    throw std::runtime_error(std::format(
+    throw std::runtime_error(fmt::format(
         "must be std::vector<uint8_t>, but got {}", obj.type().name()));
   }
 }
@@ -216,7 +216,7 @@ MutableBitVector BitsType::serialize(const std::any &obj) const {
 std::any BitsType::deserialize(BitVector &data) const {
   uint64_t w = getWidth();
   if (data.width() < w)
-    throw std::runtime_error(std::format("Insufficient data for bits type. "
+    throw std::runtime_error(fmt::format("Insufficient data for bits type. "
                                          " Expected {} bits, got {} bits",
                                          w, data.width()));
   BitVector view = data.slice(0, w);
@@ -269,7 +269,7 @@ void SIntType::ensureValid(const std::any &obj) const {
   try {
     Int value = getIntLikeFromAny(obj, getWidth());
   } catch (const std::exception &e) {
-    throw std::runtime_error(std::format(
+    throw std::runtime_error(fmt::format(
         "Unable to convert provided object to a {}-bit wide Int: {}",
         getWidth(), e.what()));
   }
@@ -279,7 +279,7 @@ MutableBitVector SIntType::serialize(const std::any &obj) const {
   Int ival = getIntLikeFromAny(obj, getWidth());
   if (static_cast<uint64_t>(ival.width()) != getWidth())
     throw std::runtime_error(
-        std::format("Int width mismatch for SIntType serialize. Expected {} "
+        fmt::format("Int width mismatch for SIntType serialize. Expected {} "
                     "bits, got {} bits",
                     getWidth(), ival.width()));
   // Move bits into MutableBitVector.
@@ -289,7 +289,7 @@ MutableBitVector SIntType::serialize(const std::any &obj) const {
 std::any SIntType::deserialize(BitVector &data) const {
   uint64_t w = getWidth();
   if (data.width() < w)
-    throw std::runtime_error(std::format(
+    throw std::runtime_error(fmt::format(
         "Insufficient data for sint type. Expected {} bits, got {} bits", w,
         data.width()));
   Int val(data.slice(0, w));
@@ -301,7 +301,7 @@ void UIntType::ensureValid(const std::any &obj) const {
   try {
     UInt value = getUIntLikeFromAny(obj, getWidth());
   } catch (const std::exception &e) {
-    throw std::runtime_error(std::format(
+    throw std::runtime_error(fmt::format(
         "Unable to convert provided object to a {}-bit wide UInt: {}",
         getWidth(), e.what()));
   }
@@ -310,7 +310,7 @@ void UIntType::ensureValid(const std::any &obj) const {
 MutableBitVector UIntType::serialize(const std::any &obj) const {
   UInt uval = getUIntLikeFromAny(obj, getWidth());
   if (static_cast<uint64_t>(uval.width()) != getWidth())
-    throw std::runtime_error(std::format(
+    throw std::runtime_error(fmt::format(
         "UInt width mismatch for UIntType serialize. Expected {} bits, got {} "
         "bits",
         getWidth(), uval.width()));
@@ -320,7 +320,7 @@ MutableBitVector UIntType::serialize(const std::any &obj) const {
 std::any UIntType::deserialize(BitVector &data) const {
   uint64_t w = getWidth();
   if (data.width() < w)
-    throw std::runtime_error(std::format(
+    throw std::runtime_error(fmt::format(
         "Insufficient data for uint type. Expected {} bits, got {} bits", w,
         data.width()));
   UInt val(data.slice(0, w));
@@ -333,25 +333,25 @@ void StructType::ensureValid(const std::any &obj) const {
     auto structData = std::any_cast<std::map<std::string, std::any>>(obj);
 
     if (structData.size() != fields.size()) {
-      throw std::runtime_error(std::format("struct has {} fields, expected {}",
+      throw std::runtime_error(fmt::format("struct has {} fields, expected {}",
                                            structData.size(), fields.size()));
     }
 
     for (const auto &[fieldName, fieldType] : fields) {
       auto it = structData.find(fieldName);
       if (it == structData.end())
-        throw std::runtime_error(std::format("missing field '{}'", fieldName));
+        throw std::runtime_error(fmt::format("missing field '{}'", fieldName));
 
       try {
         fieldType->ensureValid(it->second);
       } catch (const std::runtime_error &e) {
         throw std::runtime_error(
-            std::format("invalid field '{}': {}", fieldName, e.what()));
+            fmt::format("invalid field '{}': {}", fieldName, e.what()));
       }
     }
   } catch (const std::bad_any_cast &) {
     throw std::runtime_error(
-        std::format("must be std::map<std::string, std::any>, but got {}",
+        fmt::format("must be std::map<std::string, std::any>, but got {}",
                     obj.type().name()));
   }
 }
@@ -399,7 +399,7 @@ void ArrayType::ensureValid(const std::any &obj) const {
     auto arrayData = std::any_cast<std::vector<std::any>>(obj);
 
     if (arrayData.size() != size) {
-      throw std::runtime_error(std::format("array has {} elements, expected {}",
+      throw std::runtime_error(fmt::format("array has {} elements, expected {}",
                                            arrayData.size(), size));
     }
 
@@ -408,11 +408,11 @@ void ArrayType::ensureValid(const std::any &obj) const {
         elementType->ensureValid(arrayData[i]);
       } catch (const std::runtime_error &e) {
         throw std::runtime_error(
-            std::format("invalid element {}: {}", i, e.what()));
+            fmt::format("invalid element {}: {}", i, e.what()));
       }
     }
   } catch (const std::bad_any_cast &) {
-    throw std::runtime_error(std::format(
+    throw std::runtime_error(fmt::format(
         "must be std::vector<std::any>, but got {}", obj.type().name()));
   }
 }
@@ -453,7 +453,7 @@ void UnionType::ensureValid(const std::any &obj) const {
     auto unionData = std::any_cast<std::map<std::string, std::any>>(obj);
 
     if (unionData.size() != 1) {
-      throw std::runtime_error(std::format(
+      throw std::runtime_error(fmt::format(
           "union must have exactly 1 active field, got {}", unionData.size()));
     }
 
@@ -464,16 +464,16 @@ void UnionType::ensureValid(const std::any &obj) const {
           fieldType->ensureValid(activeValue);
         } catch (const std::runtime_error &e) {
           throw std::runtime_error(
-              std::format("invalid field '{}': {}", activeName, e.what()));
+              fmt::format("invalid field '{}': {}", activeName, e.what()));
         }
         return;
       }
     }
     throw std::runtime_error(
-        std::format("unknown field '{}' in union", activeName));
+        fmt::format("unknown field '{}' in union", activeName));
   } catch (const std::bad_any_cast &) {
     throw std::runtime_error(
-        std::format("must be std::map<std::string, std::any>, but got {}",
+        fmt::format("must be std::map<std::string, std::any>, but got {}",
                     obj.type().name()));
   }
 }
@@ -508,7 +508,7 @@ std::any UnionType::deserialize(BitVector &data) const {
   // which field is active in a packed union.
   std::ptrdiff_t unionWidth = getBitWidth();
   if (data.width() < static_cast<uint64_t>(unionWidth))
-    throw std::runtime_error(std::format("Insufficient data for union type. "
+    throw std::runtime_error(fmt::format("Insufficient data for union type. "
                                          " Expected {} bits, got {} bits",
                                          unionWidth, data.width()));
 

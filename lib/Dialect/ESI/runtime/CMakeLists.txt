@@ -40,10 +40,22 @@ endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
-set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
+if(APPLE)
+  # On macOS use @loader_path; $ORIGIN is an ELF-only concept. Cover both
+  # same-directory loads (wheel layout: esiaccel/lib/*) and ../lib loads
+  # (bin/ -> ../lib/).
+  set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/../lib")
+else()
+  set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
+endif()
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
-set(CMAKE_BUILD_RPATH
-      "${CMAKE_BUILD_RPATH}:${CMAKE_BINARY_DIR}/lib:$ORIGIN/../lib")
+if(APPLE)
+  set(CMAKE_BUILD_RPATH
+        "${CMAKE_BUILD_RPATH};${CMAKE_BINARY_DIR}/lib;@loader_path/../lib")
+else()
+  set(CMAKE_BUILD_RPATH
+        "${CMAKE_BUILD_RPATH}:${CMAKE_BINARY_DIR}/lib:$ORIGIN/../lib")
+endif()
 
 # JSON parser for the manifest.
 if (NOT TARGET nlohmann_json)
@@ -354,6 +366,9 @@ if(ESI_COSIM)
     ESICppRuntime
     protobuf::libprotobuf
     gRPC::grpc++
+  )
+  target_link_libraries(CosimRpc PRIVATE
+    fmt::fmt-header-only
   )
   target_include_directories(CosimRpc PUBLIC "$<BUILD_INTERFACE:${PROTO_BINARY_DIR}>")
   protobuf_generate(

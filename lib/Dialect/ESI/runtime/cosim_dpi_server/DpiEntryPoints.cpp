@@ -24,7 +24,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
-#include <format>
+#include <fmt/format.h>
 
 using namespace esi;
 using namespace esi::cosim;
@@ -81,7 +81,7 @@ static int findPort() {
     return 0;
   }
   getLogger().info("cosim",
-                   std::format("Opening RPC server on port {}", portEnv));
+                   fmt::format("Opening RPC server on port {}", portEnv));
   return std::strtoull(portEnv, nullptr, 10);
 }
 
@@ -110,7 +110,7 @@ static int validateSvOpenArray(const svOpenArrayHandle data,
   if (numElems * expectedElemSize != totalBytes) {
     getLogger().error(
         "cosim",
-        std::format(
+        fmt::format(
             "DPI-C ERROR: passed array argument that doesn't have expected "
             "element-size: expected={} actual={} numElems={} "
             "totalBytes={}",
@@ -203,7 +203,7 @@ DPI int sv2cCosimserverEpTryGet(char *endpointId,
   // a message most of the time, this is important for performance.
   if (validateSvOpenArray(data, sizeof(int8_t)) != 0) {
     getLogger().error("cosim",
-                      std::format("DPI-func={} line={} event=invalid-sv-array",
+                      fmt::format("DPI-func={} line={} event=invalid-sv-array",
                                   __func__, __LINE__));
     return -2;
   }
@@ -214,7 +214,7 @@ DPI int sv2cCosimserverEpTryGet(char *endpointId,
   } else if (*dataSize > (unsigned)svSizeOfArray(data)) {
     getLogger().error(
         "cosim",
-        std::format("DPI-func={} line={} event=invalid-size (max {})", __func__,
+        fmt::format("DPI-func={} line={} event=invalid-size (max {})", __func__,
                     __LINE__, (unsigned)svSizeOfArray(data)));
     return -3;
   }
@@ -253,7 +253,7 @@ DPI int sv2cCosimserverEpTryPut(char *endpointId,
 
   if (validateSvOpenArray(data, sizeof(int8_t)) != 0) {
     getLogger().error("cosim",
-                      std::format("DPI-func={} line={} event=invalid-sv-array",
+                      fmt::format("DPI-func={} line={} event=invalid-sv-array",
                                   __func__, __LINE__));
     return -2;
   }
@@ -264,7 +264,7 @@ DPI int sv2cCosimserverEpTryPut(char *endpointId,
   } else if (dataSize > svSizeOfArray(data)) { // not enough data
     getLogger().error(
         "cosim",
-        std::format("DPI-func={} line={} event=invalid-size limit={} array={}",
+        fmt::format("DPI-func={} line={} event=invalid-size limit={} array={}",
                     __func__, __LINE__, dataSize, svSizeOfArray(data)));
     return -3;
   }
@@ -313,7 +313,7 @@ DPI int sv2cCosimserverInit() {
     // Open log file if requested.
     const char *logFN = getenv("COSIM_DEBUG_FILE");
     if (logFN != nullptr) {
-      getLogger().info("cosim", std::format("Opening debug log: {}", logFN));
+      getLogger().info("cosim", fmt::format("Opening debug log: {}", logFN));
       logFile = fopen(logFN, "w");
     }
 
@@ -335,7 +335,7 @@ sv2cCosimserverSetManifest(int esiVersion,
 
   if (validateSvOpenArray(compressedManifest, sizeof(int8_t)) != 0) {
     getLogger().error("cosim",
-                      std::format("DPI-func={} line={} event=invalid-sv-array",
+                      fmt::format("DPI-func={} line={} event=invalid-sv-array",
                                   __func__, __LINE__));
     return;
   }
@@ -347,7 +347,7 @@ sv2cCosimserverSetManifest(int esiVersion,
     blob[size - i - 1] = *(char *)svGetArrElemPtr1(compressedManifest, i);
   }
   getLogger().info("cosim",
-                   std::format("Setting manifest (esiVersion={}, size={})",
+                   fmt::format("Setting manifest (esiVersion={}, size={})",
                                esiVersion, size));
   server->setManifest(esiVersion, blob);
 }

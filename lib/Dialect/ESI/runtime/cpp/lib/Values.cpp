@@ -9,7 +9,7 @@
 #include "esi/Values.h"
 #include <algorithm>
 #include <cstring>
-#include <format>
+#include <fmt/format.h>
 
 using namespace esi;
 
@@ -22,7 +22,7 @@ BitVector::BitVector(std::span<const byte> bytes, std::optional<size_t> width,
   size_t totalBitsAvail = bytes.size() * 8 - bitIndex;
   if (bitWidth > totalBitsAvail)
     throw std::invalid_argument(
-        std::format("Width of {} bits exceeds provided storage of {} bits",
+        fmt::format("Width of {} bits exceeds provided storage of {} bits",
                     bitWidth, totalBitsAvail));
 }
 
@@ -379,7 +379,7 @@ std::string BitVector::toString(unsigned base) const {
     return toDecimalString(*this);
   default:
     throw std::invalid_argument(
-        std::format("Unsupported base '{}' for BitVector::toString", base));
+        fmt::format("Unsupported base '{}' for BitVector::toString", base));
   }
 }
 
@@ -426,7 +426,7 @@ bool BitVector::operator==(const BitVector &rhs) const {
 UInt::UInt(uint64_t v, unsigned width) : MutableBitVector(width) {
   if (width > 0 && width < 64 && (v >> width) != 0)
     throw std::overflow_error(
-        std::format("Value {} does not fit in {} bits", v, width));
+        fmt::format("Value {} does not fit in {} bits", v, width));
   for (size_t i = 0; i < width; ++i)
     if ((v >> i) & 1)
       setBit(i, true);
@@ -438,7 +438,7 @@ Int::Int(int64_t v, unsigned width) : MutableBitVector(width) {
     int64_t minVal = -(1LL << (width - 1));
     if (v < minVal || v > maxVal)
       throw std::overflow_error(
-          std::format("Value {} does not fit in {} bits", v, width));
+          fmt::format("Value {} does not fit in {} bits", v, width));
   }
   for (size_t i = 0; i < width; ++i)
     if ((v >> i) & 1)
@@ -520,12 +520,12 @@ int64_t Int::toI64() const {
 
 void Int::fits(int64_t v, unsigned n) {
   if (n == 0 || n > 64)
-    throw std::invalid_argument(std::format("Invalid bit width: {}", n));
+    throw std::invalid_argument(fmt::format("Invalid bit width: {}", n));
   int64_t min = -(1LL << (n - 1));
   int64_t max = (1LL << (n - 1)) - 1;
   if (v < min || v > max)
     throw std::overflow_error(
-        std::format("Value {} does not fit in int{}_t", v, n));
+        fmt::format("Value {} does not fit in int{}_t", v, n));
 }
 
 uint64_t UInt::toUI64() const {
@@ -544,9 +544,9 @@ uint64_t UInt::toUI64() const {
 
 void UInt::fits(uint64_t v, unsigned n) {
   if (n == 0 || n > 64)
-    throw std::invalid_argument(std::format("Invalid bit width: {}", n));
+    throw std::invalid_argument(fmt::format("Invalid bit width: {}", n));
   uint64_t max = (n == 64) ? UINT64_MAX : ((1ULL << n) - 1);
   if (v > max)
     throw std::overflow_error(
-        std::format("Value {} does not fit in uint{}_t", v, n));
+        fmt::format("Value {} does not fit in uint{}_t", v, n));
 }

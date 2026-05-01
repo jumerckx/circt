@@ -117,11 +117,21 @@ if(Python3_FOUND)
     endif()
 
     if (WHEEL_BUILD)
-      set_target_properties(esiCppAccel PROPERTIES
-        INSTALL_RPATH "$ORIGIN/lib")
+      if(APPLE)
+        set_target_properties(esiCppAccel PROPERTIES
+          INSTALL_RPATH "@loader_path;@loader_path/lib")
+      else()
+        set_target_properties(esiCppAccel PROPERTIES
+          INSTALL_RPATH "$ORIGIN:$ORIGIN/lib")
+      endif()
     else()
-      set_target_properties(esiCppAccel PROPERTIES
-        INSTALL_RPATH "$ORIGIN/../lib")
+      if(APPLE)
+        set_target_properties(esiCppAccel PROPERTIES
+          INSTALL_RPATH "@loader_path;@loader_path/../lib")
+      else()
+        set_target_properties(esiCppAccel PROPERTIES
+          INSTALL_RPATH "$ORIGIN/../lib")
+      endif()
     endif()
     set_target_properties(esiCppAccel PROPERTIES
       INSTALL_RPATH_USE_LINK_PATH FALSE)

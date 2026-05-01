@@ -14,7 +14,7 @@
 
 #include "esi/Context.h"
 #include "esi/Accelerator.h"
-#include <format>
+#include <fmt/format.h>
 #include <sstream>
 
 using namespace esi;
@@ -33,7 +33,7 @@ void Context::disconnectAll() {
 void Context::registerType(Type *type) {
   if (types.count(type->getID()))
     throw std::runtime_error(
-        std::format("Type '{}' already registered in context (type is '{}')",
+        fmt::format("Type '{}' already registered in context (type is '{}')",
                     type->getID(), type->toString()));
   types.emplace(type->getID(), std::unique_ptr<Type>(type));
 }

@@ -35,6 +35,10 @@ target_link_libraries(EsiCosimDpiServer
     CosimBackend
     MtiPli
 )
+target_link_libraries(EsiCosimDpiServer
+  PRIVATE
+    fmt::fmt-header-only
+)
 
 add_dependencies(ESIRuntime EsiCosimDpiServer)
 install(TARGETS EsiCosimDpiServer
