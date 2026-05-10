@@ -1,6 +1,10 @@
 name: Upload Wheels
 
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/uploadWheels.yml'
+      - 'lib/Bindings/Python/**'
   release:
     types: [created]
   workflow_dispatch:
@@ -19,12 +23,14 @@ on:
           - cp310-manylinux_x86_64
           - cp313-manylinux_x86_64
           - cp314-manylinux_x86_64
+          - cp313-macosx_arm64
+          - cp314-macosx_arm64
 
 jobs:
   select_matrix:
     name: Select wheel matrix
     runs-on: ubuntu-22.04
-    if: github.repository == 'llvm/circt'
+    if: github.repository == 'llvm/circt' || github.repository == 'jumerckx/circt'
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -34,17 +40,22 @@ jobs:
           if [[ "${{ github.event_name }}" != "workflow_dispatch" || "${{ inputs.cibw-build }}" == "all" ]]; then
             matrix='{
               "config": [
-                {"os":"ubuntu-22.04","cibw_build":"cp310-manylinux_x86_64"},
-                {"os":"ubuntu-22.04","cibw_build":"cp313-manylinux_x86_64"},
-                {"os":"ubuntu-22.04","cibw_build":"cp314-manylinux_x86_64"}
+                {"os":"ubuntu-22.04","cibw_build":"cp314-manylinux_x86_64"},
+                {"os":"macos-14","cibw_build":"cp314-macosx_arm64"}
               ]
             }'
           else
-            matrix='{
-              "config": [
-                {"os":"ubuntu-22.04","cibw_build":"${{ inputs.cibw-build }}"}
+            cibw_build="${{ inputs.cibw-build }}"
+            if [[ "$cibw_build" == *"macosx_arm64" ]]; then
+              os="macos-14"
+            else
+              os="ubuntu-22.04"
+            fi
+            matrix="{
+              \"config\": [
+                {\"os\":\"$os\",\"cibw_build\":\"$cibw_build\"}
               ]
-            }'
+            }"
           fi
           {
             echo "matrix<<EOF"
@@ -55,7 +66,7 @@ jobs:
   build_wheels:
     name: Build wheels with ${{ matrix.config.cibw_build }}
     runs-on: ${{ matrix.config.os }}
-    if: github.repository == 'llvm/circt'
+    if: github.repository == 'llvm/circt' || github.repository == 'jumerckx/circt'
     needs: select_matrix
     strategy:
       fail-fast: false
@@ -83,6 +94,7 @@ jobs:
           CIBW_BUILD: ${{ matrix.config.cibw_build }}
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
           CIBW_BUILD_FRONTEND: build
+          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=14.0
           SETUPTOOLS_SCM_DEBUG: True
 
       - name: Upload (stage) wheels as artifacts

@@ -1,16 +1,13 @@
 name: Publish ESI Runtime
 
 on:
-  push:
-    tags:
-      - ESIRuntime-*
   workflow_dispatch:
 
 jobs:
   build_wheels:
     name: Build wheels with ${{ matrix.config.cibw_build }}
     runs-on: ${{ matrix.config.os }}
-    if: github.repository == 'llvm/circt'
+    if: github.repository == 'llvm/circt' || github.repository == 'jumerckx/circt'
     strategy:
       fail-fast: false
       matrix:
